@@ -8,14 +8,13 @@
     <arg name="camera_resolution" default="HD" />
     <arg name="fps" default="30" />
     <arg name="serial_number" default="" />
-    <arg name="pcd_header" default="map" />
 
     <arg name="publish_rgb" default="true" />
     <arg name="publish_depth" default="false" />
     <arg name="publish_camera_info" default="false" />
-    <arg name="publish_pcd" default="false" />
 
     <arg name="camera_type" default="None" />
+    <arg name="device_idx" default="0" />
 
     <node name="camera_ros" pkg="camera_utils_ros" type="camera_ros.py" output="screen" respawn="false">
         <param name="rgb_topic" value="$(arg rgb_topic)" />
@@ -25,14 +24,13 @@
         <param name="camera_resolution" value="$(arg camera_resolution)" />
         <param name="fps" value="$(arg fps)" />
         <param name="serial_number" value="$(arg serial_number)" />
-        <param name="pcd_header" value="$(arg pcd_header)" />
         
         <param name="publish_rgb" value="$(arg publish_rgb)" />
         <param name="publish_depth" value="$(arg publish_depth)" />
         <param name="publish_camera_info" value="$(arg publish_camera_info)" />
-        <param name="publish_pcd" value="$(arg publish_pcd)" />
 
         <param name="camera_type" value="$(arg camera_type)" />
+        <param name="device_idx" value="$(arg device_idx)" />
     </node>
 
 </launch>

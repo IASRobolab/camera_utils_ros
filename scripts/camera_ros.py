@@ -29,24 +29,10 @@ from camera_utils.cameras.Webcam import Webcam
 from camera_utils.cameras.CameraInterface import Camera
 
 import rospy
-from sensor_msgs.msg import CameraInfo, Image, CompressedImage
-from sensor_msgs.msg import PointCloud2, PointField
+from sensor_msgs.msg import CameraInfo, Image
 from cv_bridge import CvBridge
 from std_msgs.msg import Header
-from sensor_msgs import point_cloud2
 
-import sys
-import struct
-import select
-
-def stop_loop(stop_entry):
-    '''
-    Used to quit an infinite loop with a char/string entry
-    '''
-    rlist = select.select([sys.stdin], [], [], 0.001)[0]
-    if rlist and sys.stdin.readline().find(stop_entry) != -1:
-        return True
-    return False
 
 
 if __name__ == "__main__":
@@ -66,33 +52,46 @@ if __name__ == "__main__":
     camera_resolution = eval("Resolution." + camera_resolution)
     fps = rospy.get_param("~fps", 30)
     serial_number = rospy.get_param("~serial_number", "")
-    pcd_header = rospy.get_param("~pcd_header", "map")
 
     publish_rgb = rospy.get_param("~publish_rgb", None)
     publish_depth = rospy.get_param("~publish_depth", None)
     publish_camera_info = rospy.get_param("~publish_camera_info", None)
-    publish_pcd = rospy.get_param("~publish_pcd", None)
 
     camera_type = rospy.get_param("~camera_type", None)
+    device_idx = rospy.get_param("~device_idx", 0)
 
     if not camera_type:
         rospy.logerr("No camera type passed")
         exit()
 
+    depth_encoding = None
     if camera_type == "intel":
         camera = IntelRealsense(camera_resolution=camera_resolution, fps=fps, serial_number=serial_number)
+        depth_encoding = "mono16"
     elif camera_type == "zed":
         camera = Zed(camera_resolution=camera_resolution, fps=fps, serial_number=serial_number)
+        depth_encoding = "32FC1"
     elif camera_type == "webcam":
-        camera = Webcam()
+        camera = Webcam(device_idx)
     else:
         rospy.logerr("Camera Type " + camera_type + " does not exists!")
         exit()
 
-    rgb_publisher = rospy.Publisher(rgb_topic, Image, queue_size=5)
-    depth_publisher = rospy.Publisher(depth_topic, Image, queue_size=5)
-    camera_info_publisher = rospy.Publisher(camera_info_topic, CameraInfo, queue_size=5)
-    pointcloud_publisher = rospy.Publisher(camera_pcd_topic, PointCloud2, queue_size=3)
+    rgb_publisher = None
+    depth_publisher = None
+    camera_info_publisher = None
+
+    
+    if publish_rgb and publish_depth:
+        rgb_publisher = rospy.Publisher(rgb_topic, Image, queue_size=5)
+        depth_publisher = rospy.Publisher(depth_topic, Image, queue_size=5)
+    elif publish_depth:
+        depth_publisher = rospy.Publisher(depth_topic, Image, queue_size=5)
+    elif publish_rgb:
+        rgb_publisher = rospy.Publisher(rgb_topic, Image, queue_size=5)
+
+    if publish_camera_info:
+        camera_info_publisher = rospy.Publisher(camera_info_topic, CameraInfo, queue_size=5)
 
     intr = None
     camera_info = CameraInfo()
@@ -112,48 +111,14 @@ if __name__ == "__main__":
     pcd_header = Header()
     pcd_header.frame_id = pcd_header
 
-    while not stop_loop(ord('q')):
+    while not rospy.is_shutdown():
 
 
-        if publish_pcd:
-            rgb, depth = camera.get_frames()
-
-            points = []
-
-            for u in range(image_dim[0]):
-                for v in range(image_dim[1]):
-
-                    z = depth[u, v] * 0.001
-                    x = ((u - intr["px"]) * z) / intr["fx"]
-                    y = ((v - intr["py"]) * z) / intr["fy"]
-
-                    color = rgb[u, v]
-
-                    r = int(color[0])
-                    g = int(color[1])
-                    b = int(color[2])
-                    a = 255
-
-                    color = struct.unpack('I', struct.pack('BBBB', r, g, b, a))[0]
-
-                    points.append([x, y, z, color])
-            
-            fields = [PointField('x', 0, PointField.FLOAT32, 1),
-            PointField('y', 4, PointField.FLOAT32, 1),
-            PointField('z', 8, PointField.FLOAT32, 1),
-            PointField('rgba', 12, PointField.UINT32, 1)]
-
-
-            pcd = point_cloud2.create_cloud(pcd_header, fields, points)
-            pcd.header.stamp = rospy.Time.now()
-            pointcloud_publisher.publish(pcd)
-            rgb_publisher.publish(bridge.cv2_to_imgmsg(rgb, "bgr8"))
-            depth_publisher.publish(bridge.cv2_to_imgmsg(depth, "mono16"))
-
-        elif publish_depth and publish_rgb:
+  
+        if publish_depth and publish_rgb:
             rgb, depth = camera.get_frames()
             rgb_publisher.publish(bridge.cv2_to_imgmsg(rgb, "bgr8"))
-            depth_publisher.publish(bridge.cv2_to_imgmsg(depth, "mono16"))
+            depth_publisher.publish(bridge.cv2_to_imgmsg(depth, depth_encoding))
 
         elif publish_rgb:
             rgb = camera.get_rgb()
@@ -161,7 +126,7 @@ if __name__ == "__main__":
 
         elif publish_depth:
             depth = camera.get_depth()
-            depth_publisher.publish(bridge.cv2_to_imgmsg(depth, "mono16"))
+            depth_publisher.publish(bridge.cv2_to_imgmsg(depth, depth_encoding))
 
         
         if publish_camera_info:
