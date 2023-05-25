@@ -29,7 +29,7 @@ from camera_utils.cameras.Webcam import Webcam
 from camera_utils.cameras.CameraInterface import Camera
 
 import rospy
-from sensor_msgs.msg import CameraInfo, Image
+from sensor_msgs.msg import CameraInfo, Image, CompressedImage
 from cv_bridge import CvBridge
 from std_msgs.msg import Header
 
@@ -50,6 +50,8 @@ if __name__ == "__main__":
 
     camera_resolution = rospy.get_param("~camera_resolution", "HD")
     camera_resolution = eval("Resolution." + camera_resolution)
+    compressed_image = rospy.get_param("~compressed_image", False)
+
     fps = rospy.get_param("~fps", 30)
     serial_number = rospy.get_param("~serial_number", "")
 
@@ -80,15 +82,19 @@ if __name__ == "__main__":
     rgb_publisher = None
     depth_publisher = None
     camera_info_publisher = None
-
     
+    image_type = Image
+    if compressed_image:
+        image_type = CompressedImage
+        rgb_topic += "/compressed"
+
     if publish_rgb and publish_depth:
-        rgb_publisher = rospy.Publisher(rgb_topic, Image, queue_size=5)
-        depth_publisher = rospy.Publisher(depth_topic, Image, queue_size=5)
+        rgb_publisher = rospy.Publisher(rgb_topic, image_type, queue_size=5)
+        depth_publisher = rospy.Publisher(depth_topic, image_type, queue_size=5)
     elif publish_depth:
-        depth_publisher = rospy.Publisher(depth_topic, Image, queue_size=5)
+        depth_publisher = rospy.Publisher(depth_topic, image_type, queue_size=5)
     elif publish_rgb:
-        rgb_publisher = rospy.Publisher(rgb_topic, Image, queue_size=5)
+        rgb_publisher = rospy.Publisher(rgb_topic, image_type, queue_size=5)
 
     if publish_camera_info:
         camera_info_publisher = rospy.Publisher(camera_info_topic, CameraInfo, queue_size=5)
@@ -111,18 +117,28 @@ if __name__ == "__main__":
     pcd_header = Header()
     pcd_header.frame_id = pcd_header
 
+    rgb_cv2_to_imgmsg = bridge.cv2_to_imgmsg
+    rgb_encoding = "bgr8"
+    if compressed_image:
+        rgb_cv2_to_imgmsg = bridge.cv2_to_compressed_imgmsg
+        rgb_encoding = "jpg"
+
+
+
     while not rospy.is_shutdown():
 
 
   
         if publish_depth and publish_rgb:
             rgb, depth = camera.get_frames()
-            rgb_publisher.publish(bridge.cv2_to_imgmsg(rgb, "bgr8"))
+            
+            rgb_publisher.publish(rgb_cv2_to_imgmsg(rgb, rgb_encoding))
             depth_publisher.publish(bridge.cv2_to_imgmsg(depth, depth_encoding))
 
         elif publish_rgb:
             rgb = camera.get_rgb()
-            rgb_publisher.publish(bridge.cv2_to_imgmsg(rgb, "bgr8"))
+            rgb_publisher.publish(rgb_cv2_to_imgmsg(rgb, rgb_encoding))
+
 
         elif publish_depth:
             depth = camera.get_depth()
