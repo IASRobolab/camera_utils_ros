@@ -131,18 +131,36 @@ if __name__ == "__main__":
   
         if publish_depth and publish_rgb:
             rgb, depth = camera.get_frames()
+
+            t = rospy.Time.now()
+
+            rgb_image = rgb_cv2_to_imgmsg(rgb, rgb_encoding)
+            depth_image = bridge.cv2_to_imgmsg(depth, depth_encoding)
+
+            rgb_image.header.stamp = t
+            depth_image.header.stamp = t
             
-            rgb_publisher.publish(rgb_cv2_to_imgmsg(rgb, rgb_encoding))
-            depth_publisher.publish(bridge.cv2_to_imgmsg(depth, depth_encoding))
+            rgb_publisher.publish(rgb_image)
+            depth_publisher.publish(depth_image)
 
         elif publish_rgb:
             rgb = camera.get_rgb()
-            rgb_publisher.publish(rgb_cv2_to_imgmsg(rgb, rgb_encoding))
+
+            t = rospy.Time.now()
+
+            rgb_image = rgb_cv2_to_imgmsg(rgb, rgb_encoding)
+            rgb_image.header.stamp = t
+            rgb_publisher.publish(rgb_image)
 
 
         elif publish_depth:
             depth = camera.get_depth()
-            depth_publisher.publish(bridge.cv2_to_imgmsg(depth, depth_encoding))
+            t = rospy.Time.now()
+
+            depth_image = bridge.cv2_to_imgmsg(depth, depth_encoding)
+            depth_image.header.stamp = t
+            
+            depth_publisher.publish(depth_image)
 
         
         if publish_camera_info:
