@@ -29,11 +29,13 @@ from camera_utils.cameras.Webcam import Webcam
 from camera_utils.cameras.CameraInterface import Camera
 
 import rospy
-from sensor_msgs.msg import CameraInfo, Image, CompressedImage
+from sensor_msgs.msg import CameraInfo, Image, CompressedImage, PointCloud2, PointField
 from cv_bridge import CvBridge
 from std_msgs.msg import Header
 
-
+import numpy as np
+import ros_numpy
+import sys
 
 if __name__ == "__main__":
 
@@ -57,6 +59,7 @@ if __name__ == "__main__":
 
     publish_rgb = rospy.get_param("~publish_rgb", None)
     publish_depth = rospy.get_param("~publish_depth", None)
+    publish_pcd = rospy.get_param("~publish_pcd", None)
     publish_camera_info = rospy.get_param("~publish_camera_info", None)
 
     camera_type = rospy.get_param("~camera_type", None)
@@ -67,6 +70,7 @@ if __name__ == "__main__":
         exit()
 
     depth_encoding = None
+
     if camera_type == "intel":
         camera = IntelRealsense(camera_resolution=camera_resolution, fps=fps, serial_number=serial_number)
         depth_encoding = "mono16"
@@ -82,19 +86,23 @@ if __name__ == "__main__":
     rgb_publisher = None
     depth_publisher = None
     camera_info_publisher = None
+    pcd_publisher = None
     
     image_type = Image
+    pcd_type = PointCloud2
+
     if compressed_image:
         image_type = CompressedImage
         rgb_topic += "/compressed"
 
-    if publish_rgb and publish_depth:
-        rgb_publisher = rospy.Publisher(rgb_topic, image_type, queue_size=5)
+    if publish_depth:
         depth_publisher = rospy.Publisher(depth_topic, image_type, queue_size=5)
-    elif publish_depth:
-        depth_publisher = rospy.Publisher(depth_topic, image_type, queue_size=5)
-    elif publish_rgb:
+        
+    if publish_rgb:
         rgb_publisher = rospy.Publisher(rgb_topic, image_type, queue_size=5)
+
+    if publish_pcd:
+        pcd_publisher = rospy.Publisher(camera_pcd_topic, pcd_type, queue_size=5)
 
     if publish_camera_info:
         camera_info_publisher = rospy.Publisher(camera_info_topic, CameraInfo, queue_size=5)
@@ -115,7 +123,7 @@ if __name__ == "__main__":
 
     image_dim = camera.get_rgb().shape
     pcd_header = Header()
-    pcd_header.frame_id = pcd_header
+    pcd_header.frame_id = "map"
 
     rgb_cv2_to_imgmsg = bridge.cv2_to_imgmsg
     rgb_encoding = "bgr8"
@@ -123,16 +131,12 @@ if __name__ == "__main__":
         rgb_cv2_to_imgmsg = bridge.cv2_to_compressed_imgmsg
         rgb_encoding = "jpg"
 
-
-
     while not rospy.is_shutdown():
-
-
-  
+        
+        t = rospy.Time.now()
+                    
         if publish_depth and publish_rgb:
             rgb, depth = camera.get_frames()
-
-            t = rospy.Time.now()
 
             rgb_image = rgb_cv2_to_imgmsg(rgb, rgb_encoding)
             depth_image = bridge.cv2_to_imgmsg(depth, depth_encoding)
@@ -146,8 +150,6 @@ if __name__ == "__main__":
         elif publish_rgb:
             rgb = camera.get_rgb()
 
-            t = rospy.Time.now()
-
             rgb_image = rgb_cv2_to_imgmsg(rgb, rgb_encoding)
             rgb_image.header.stamp = t
             rgb_publisher.publish(rgb_image)
@@ -155,13 +157,32 @@ if __name__ == "__main__":
 
         elif publish_depth:
             depth = camera.get_depth()
-            t = rospy.Time.now()
-
+        
             depth_image = bridge.cv2_to_imgmsg(depth, depth_encoding)
             depth_image.header.stamp = t
             
             depth_publisher.publish(depth_image)
 
+        if publish_pcd:
+         
+            pc = camera.get_pcd()
+          
+            pc.transform([[-1, 0,0,0], [0, -1,0,0],[0, 0,-1,0],[0, 0,0,1]])
+            pc = np.asarray(pc.points)
+           
+            pc_array = np.zeros(len(pc), dtype=[
+            ('x', np.float32),
+            ('y', np.float32),
+            ('z', np.float32),
+            ('intensity', np.float32),])
+            
+            pc_array['x'] = pc[:, 0]
+            pc_array['y'] = pc[:, 1]
+            pc_array['z'] = pc[:, 2]
+            
+            cloud_msg = ros_numpy.msgify(PointCloud2, pc_array, stamp=pcd_header.stamp, frame_id=pcd_header.frame_id)
+            
+            pcd_publisher.publish(cloud_msg)
         
         if publish_camera_info:
             camera_info_publisher.publish(camera_info)
