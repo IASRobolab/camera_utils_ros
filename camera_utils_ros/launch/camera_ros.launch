@@ -5,6 +5,8 @@
     <arg name="depth_topic" default="depth_image" />
     <arg name="camera_info_topic" default="camera_info" />
     <arg name="camera_pcd_topic" default="camera_pcd" />
+    <arg name="frames_topic" default="camera_frames" />
+    <arg name="publish_separated_frames" default="true" />
     <arg name="camera_resolution" default="HD" />
     <arg name="compressed_image" default="false" />
     <arg name="fps" default="30" />
@@ -23,6 +25,7 @@
         <param name="depth_topic" value="$(arg depth_topic)" />
         <param name="camera_info_topic" value="$(arg camera_info_topic)" />
         <param name="camera_pcd_topic" value="$(arg camera_pcd_topic)" />
+        <param name="frames_topic" value="$(arg frames_topic)" />
         <param name="camera_resolution" value="$(arg camera_resolution)" />
         <param name="compressed_image" value="$(arg compressed_image)" />
         <param name="fps" value="$(arg fps)" />
@@ -32,6 +35,7 @@
         <param name="publish_depth" value="$(arg publish_depth)" />
         <param name="publish_camera_info" value="$(arg publish_camera_info)" />
         <param name="publish_pcd" value="$(arg publish_pcd)" />
+        <param name="publish_separated_frames" value="$(arg publish_separated_frames)" />
 
         <param name="camera_type" value="$(arg camera_type)" />
         <param name="device_idx" value="$(arg device_idx)" />

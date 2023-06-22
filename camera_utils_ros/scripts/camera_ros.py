@@ -30,6 +30,7 @@ from camera_utils.cameras.CameraInterface import Camera
 
 import rospy
 from sensor_msgs.msg import CameraInfo, Image, CompressedImage, PointCloud2, PointField
+from camera_utils_msgs.msg import Frames
 from cv_bridge import CvBridge
 from std_msgs.msg import Header
 
@@ -49,6 +50,8 @@ if __name__ == "__main__":
     depth_topic = rospy.get_param("~depth_topic", "depth_image_raw")
     camera_info_topic = rospy.get_param("~camera_info_topic", "camera_info")
     camera_pcd_topic = rospy.get_param("~camera_pcd_topic", "camera_pcd")
+    frames_topic = rospy.get_param("~frames_topic", "camera_frames")
+    
 
     camera_resolution = rospy.get_param("~camera_resolution", "HD")
     camera_resolution = eval("Resolution." + camera_resolution)
@@ -61,6 +64,7 @@ if __name__ == "__main__":
     publish_depth = rospy.get_param("~publish_depth", None)
     publish_pcd = rospy.get_param("~publish_pcd", None)
     publish_camera_info = rospy.get_param("~publish_camera_info", None)
+    publish_separated_frames = rospy.get_param("~publish_separated_frames", True)
 
     camera_type = rospy.get_param("~camera_type", None)
     device_idx = rospy.get_param("~device_idx", 0)
@@ -95,10 +99,15 @@ if __name__ == "__main__":
         image_type = CompressedImage
         rgb_topic += "/compressed"
 
-    if publish_depth:
+    if publish_depth and publish_rgb:
+        if publish_separated_frames:
+            depth_publisher = rospy.Publisher(depth_topic, image_type, queue_size=5)
+            rgb_publisher = rospy.Publisher(rgb_topic, image_type, queue_size=5)
+        else:
+            frames_publisher = rospy.Publisher(frames_topic, Frames, queue_size=5)
+    elif publish_depth:
         depth_publisher = rospy.Publisher(depth_topic, image_type, queue_size=5)
-        
-    if publish_rgb:
+    elif publish_rgb:
         rgb_publisher = rospy.Publisher(rgb_topic, image_type, queue_size=5)
 
     if publish_pcd:
@@ -140,12 +149,23 @@ if __name__ == "__main__":
 
             rgb_image = rgb_cv2_to_imgmsg(rgb, rgb_encoding)
             depth_image = bridge.cv2_to_imgmsg(depth, depth_encoding)
+            frames = Frames()
 
             rgb_image.header.stamp = t
             depth_image.header.stamp = t
+
+            if publish_separated_frames:
+                rgb_publisher.publish(rgb_image)
+                depth_publisher.publish(depth_image)
+            else:
+
+                frames.header.stamp = t
+                frames.rgb = rgb_image
+                frames.depth = depth_image
+
+                frames_publisher.publish(frames)
             
-            rgb_publisher.publish(rgb_image)
-            depth_publisher.publish(depth_image)
+
 
         elif publish_rgb:
             rgb = camera.get_rgb()
