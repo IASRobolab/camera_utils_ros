@@ -113,7 +113,7 @@ if __name__ == "__main__":
     if publish_pcd:
         pcd_publisher = rospy.Publisher(camera_pcd_topic, pcd_type, queue_size=5)
 
-    if publish_camera_info:
+    if publish_camera_info and publish_separated_frames:
         camera_info_publisher = rospy.Publisher(camera_info_topic, CameraInfo, queue_size=5)
 
     intr = None
@@ -162,11 +162,10 @@ if __name__ == "__main__":
                 frames.header.stamp = t
                 frames.rgb = rgb_image
                 frames.depth = depth_image
+                frames.camera_info = camera_info
 
                 frames_publisher.publish(frames)
             
-
-
         elif publish_rgb:
             rgb = camera.get_rgb()
 
@@ -204,5 +203,5 @@ if __name__ == "__main__":
             
             pcd_publisher.publish(cloud_msg)
         
-        if publish_camera_info:
+        if publish_camera_info and publish_separated_frames:
             camera_info_publisher.publish(camera_info)
