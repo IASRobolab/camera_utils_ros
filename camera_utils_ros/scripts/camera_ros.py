@@ -35,7 +35,7 @@ from cv_bridge import CvBridge
 from std_msgs.msg import Header
 
 import numpy as np
-import ros_numpy
+#import ros_numpy
 import sys
 
 if __name__ == "__main__":
@@ -62,7 +62,7 @@ if __name__ == "__main__":
 
     publish_rgb = rospy.get_param("~publish_rgb", None)
     publish_depth = rospy.get_param("~publish_depth", None)
-    publish_pcd = rospy.get_param("~publish_pcd", None)
+    #publish_pcd = rospy.get_param("~publish_pcd", None)
     publish_camera_info = rospy.get_param("~publish_camera_info", None)
     publish_separated_frames = rospy.get_param("~publish_separated_frames", True)
 
@@ -110,8 +110,8 @@ if __name__ == "__main__":
     elif publish_rgb:
         rgb_publisher = rospy.Publisher(rgb_topic, image_type, queue_size=5)
 
-    if publish_pcd:
-        pcd_publisher = rospy.Publisher(camera_pcd_topic, pcd_type, queue_size=5)
+    #if publish_pcd:
+        #pcd_publisher = rospy.Publisher(camera_pcd_topic, pcd_type, queue_size=5)
 
     if publish_camera_info and publish_separated_frames:
         camera_info_publisher = rospy.Publisher(camera_info_topic, CameraInfo, queue_size=5)
@@ -182,26 +182,26 @@ if __name__ == "__main__":
             
             depth_publisher.publish(depth_image)
 
-        if publish_pcd:
+        #if publish_pcd:
          
-            pc = camera.get_pcd()
+            #pc = camera.get_pcd()
           
-            pc.transform([[-1, 0,0,0], [0, -1,0,0],[0, 0,-1,0],[0, 0,0,1]])
-            pc = np.asarray(pc.points)
+            #pc.transform([[-1, 0,0,0], [0, -1,0,0],[0, 0,-1,0],[0, 0,0,1]])
+            #pc = np.asarray(pc.points)
            
-            pc_array = np.zeros(len(pc), dtype=[
-            ('x', np.float32),
-            ('y', np.float32),
-            ('z', np.float32),
-            ('intensity', np.float32),])
+            #pc_array = np.zeros(len(pc), dtype=[
+            #('x', np.float32),
+            #('y', np.float32),
+            #('z', np.float32),
+            #('intensity', np.float32),])
             
-            pc_array['x'] = pc[:, 0]
-            pc_array['y'] = pc[:, 1]
-            pc_array['z'] = pc[:, 2]
+            #pc_array['x'] = pc[:, 0]
+            #pc_array['y'] = pc[:, 1]
+            #pc_array['z'] = pc[:, 2]
             
-            cloud_msg = ros_numpy.msgify(PointCloud2, pc_array, stamp=pcd_header.stamp, frame_id=pcd_header.frame_id)
+            #cloud_msg = ros_numpy.msgify(PointCloud2, pc_array, stamp=pcd_header.stamp, frame_id=pcd_header.frame_id)
             
-            pcd_publisher.publish(cloud_msg)
+            #pcd_publisher.publish(cloud_msg)
         
         if publish_camera_info and publish_separated_frames:
             camera_info_publisher.publish(camera_info)

@@ -15,7 +15,7 @@
     <arg name="publish_rgb" default="true" />
     <arg name="publish_depth" default="false" />
     <arg name="publish_camera_info" default="false" />
-    <arg name="publish_pcd" default="false" />
+    <!-- <arg name="publish_pcd" default="false" /> -->
 
     <arg name="camera_type" default="None" />
     <arg name="device_idx" default="0" />
@@ -34,7 +34,7 @@
         <param name="publish_rgb" value="$(arg publish_rgb)" />
         <param name="publish_depth" value="$(arg publish_depth)" />
         <param name="publish_camera_info" value="$(arg publish_camera_info)" />
-        <param name="publish_pcd" value="$(arg publish_pcd)" />
+        <!-- <param name="publish_pcd" value="$(arg publish_pcd)" /> -->
         <param name="publish_separated_frames" value="$(arg publish_separated_frames)" />
 
         <param name="camera_type" value="$(arg camera_type)" />
